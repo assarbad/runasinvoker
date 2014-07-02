@@ -1,0 +1,20 @@
+syntax: glob
+*.ncb
+*.suo
+*.lnt
+*.ilk
+Visual Lint/*
+objfre_*
+objchk_*
+BuildLog.htm
+BuildLog_*.html
+buildfre_*.log
+buildchk_*.log
+*.user
+bin/*
+buildfre_*.wrn
+buildchk_*.wrn
+intermediate/**
+*.zip
+*.zip.asc
+*.bak
