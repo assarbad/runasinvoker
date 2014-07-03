@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///
-/// Copyright (c) 2014 - assarbad.net
+/// Written 2014, Oliver Schneider (assarbad.net) - PUBLIC DOMAIN/CC0
 ///
 /// Original filename: runasinvoker.h
 /// Project          : runasinvoker
@@ -9,22 +9,17 @@
 ///
 /// Purpose          : <see runasinvoker.cpp>
 ///
-/// Revisions:         <see runasinvoker.cpp>
-///
 ///////////////////////////////////////////////////////////////////////////////
 
-// $Id$
-
-#ifndef __RUNASINVOKER_H_VERSION__
-#define __RUNASINVOKER_H_VERSION__ 100
-
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
+#ifndef __RUNASINVOKER_H_VER__
+#define __RUNASINVOKER_H_VER__ 2014070300
+#if (defined(_MSC_VER) && (_MSC_VER >= 1020)) || defined(__MCPP)
 #pragma once
-#endif
-
+#endif // Check for "#pragma once" support
 
 #include "execommon.h"
 #include "exeversion.h"
 #include <Windows.h>
-
-#endif // __RUNASINVOKER_H_VERSION__
+#include <Shlwapi.h>
+#include "VerySimpleBuf.h"
+#endif // __RUNASINVOKER_H_VER__

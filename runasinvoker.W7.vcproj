@@ -206,6 +206,10 @@
 				RelativePath=".\runasinvoker.h"
 				>
 			</File>
+			<File
+				RelativePath=".\VerySimpleBuf.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
