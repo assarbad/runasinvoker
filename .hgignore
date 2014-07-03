@@ -18,3 +18,4 @@ intermediate/**
 *.zip
 *.zip.asc
 *.bak
+buildchk_w2K_x86.err

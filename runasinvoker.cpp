@@ -28,6 +28,12 @@
 #define ERROR_ELEVATION_REQUIRED 740L
 #endif
 
+namespace
+{
+    const LPCTSTR sIEO = _T("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options");
+    const LPCTSTR sRAI = _T("RunAsInvoker_Launcher");
+}
+
 static BOOL create_process(LPCTSTR executable, LPTSTR command_line, STARTUPINFO& si, PROCESS_INFORMATION& pi)
 {
     ZeroMemory(&si, sizeof(si));
@@ -39,6 +45,37 @@ static BOOL create_process(LPCTSTR executable, LPTSTR command_line, STARTUPINFO&
         ::ResumeThread(pi.hThread);
         ::CloseHandle(pi.hProcess);
         ::CloseHandle(pi.hThread);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+typedef CVerySimpleBuf<TCHAR> TSTR;
+
+static TSTR GetModulePath()
+{
+    TSTR retval(32*1024);
+    if(retval.getCount() > ::GetModuleFileName(NULL, retval.getBuf(), retval.getCount()))
+    {
+        return retval;
+    }
+    return (TCHAR*)0;
+}
+
+static BOOL is_registered(LPCTSTR executable)
+{
+    LONG regRes;
+    ATL::CRegKey hkRegPath;
+    TSTR regPath = sIEO;
+    regPath += _T("\\");
+    regPath += sRAI;
+    regPath += _T("\\");
+    regPath += executable;
+    _tprintf(_T("Checking path '%s'\n"), regPath.getBuf());
+    if(ERROR_SUCCESS == (regRes = hkRegPath.Open(HKEY_LOCAL_MACHINE, regPath.getBuf(), KEY_READ)))
+    {
+        hkRegPath.Close();
+        _tprintf(_T("It's registered!\n"));
         return TRUE;
     }
     return FALSE;
@@ -60,7 +97,7 @@ static BOOL launch_process(LPCTSTR executable, int argc, _TCHAR *argv[])
     }
     else
     {
-        if(ERROR_ELEVATION_REQUIRED == GetLastError())
+        if((ERROR_ELEVATION_REQUIRED == GetLastError()) && is_registered(executable))
         {
             ::SetEnvironmentVariable(_T("__COMPAT_LAYER"), _T("RUNASINVOKER"));
             _tprintf(_T("Now retrying to start with __COMPAT_LAYER=RUNASINVOKER: %s\n"), executable);
@@ -70,7 +107,7 @@ static BOOL launch_process(LPCTSTR executable, int argc, _TCHAR *argv[])
                 return TRUE;
             }
         }
-        _tprintf(_T("Process creation failed (%u).\n"), GetLastError());
+        _tprintf(_T("Process creation failed (Win32 Error: %u).\n"), GetLastError());
     }
     return FALSE;
 }
@@ -83,18 +120,65 @@ static int press_key()
 
 static int register_debugger(LPCTSTR executable)
 {
-    _tprintf(_T("Not yet implemented.\n"));
+    int retval = 1;
     if(::PathFileExists(executable))
     {
         LPCTSTR lastSlash = _tcsrchr(executable, _T('\\'));
-        if(lastSlash)
+        TSTR modpath = GetModulePath();
+        if(lastSlash && modpath)
         {
+            LONG regRes;
             LPCTSTR execfile = &lastSlash[1];
             _tprintf(_T("execfile == %s\n"), execfile);
+            ATL::CRegKey hkIEO;
+            if(ERROR_SUCCESS == (regRes = hkIEO.Open(HKEY_LOCAL_MACHINE, sIEO, KEY_WRITE | KEY_READ)))
+            {
+                ATL::CRegKey hkExecutable;
+                if(ERROR_SUCCESS == (regRes = hkExecutable.Open(hkIEO, execfile, KEY_WRITE | KEY_READ)))
+                {
+                    if(ERROR_SUCCESS == (regRes = hkExecutable.SetValue(modpath.getBuf(), _T("Debugger"))))
+                    {
+                        _tprintf(_T("Successfully set the 'Debugger' to '%s' for '%s'.\n"), modpath.getBuf(), execfile);
+                        retval = 0;
+                    }
+                    else
+                    {
+                        _tprintf(_T("ERROR: Failed to set value for 'Debugger' under '%s\\%s'  (%u)\n"), sIEO, execfile, regRes);
+                        regRes = ERROR_SUCCESS;
+                    }
+                    hkExecutable.Close();
+                }
+                if(0 == retval)
+                {
+                    retval = 1;
+                    ATL::CRegKey hkLauncher;
+                    TSTR cfgKeyName = sRAI;
+                    cfgKeyName += _T("\\");
+                    cfgKeyName += executable;
+                    if(ERROR_SUCCESS == (regRes = hkLauncher.Create(hkIEO, cfgKeyName.getBuf())))
+                    {
+                        _tprintf(_T("Successfully registered path '%s'.\n"), executable);
+                        retval = 0;
+                        hkLauncher.Close();
+                    }
+                    else
+                    {
+                        _tprintf(_T("ERROR: Failed to open/create registry key '%s' (%u)\n"), sIEO, regRes);
+                    }
+                }
+                hkIEO.Close();
+            }
+            else
+            {
+                _tprintf(_T("ERROR: Failed to open registry key '%s' (%u)\n"), executable, regRes);
+            }
         }
     }
-    (void)press_key();
-    return 1;
+    else
+    {
+        _tprintf(_T("ERROR: The given executable '%s' does not exist or is not a file!\n"), executable);
+    }
+    return retval;
 }
 
 static void show_help()

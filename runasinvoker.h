@@ -21,5 +21,6 @@
 #include "exeversion.h"
 #include <Windows.h>
 #include <Shlwapi.h>
+#include <atlbase.h>
 #include "VerySimpleBuf.h"
 #endif // __RUNASINVOKER_H_VER__
